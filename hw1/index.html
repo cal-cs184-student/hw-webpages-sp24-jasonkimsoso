@@ -1,7 +1,198 @@
 <html>
 	<head>
+	<style>
+		h1 {text-align: center;
+			font-size: xx-large;}
+		p {text-align: left;
+			font-size: larger;}
+		div {text-align: center;
+			font-size: x-large;
+			font-weight: bold;}
+		body {margin-left: 150px;
+			 margin-right: 150px;}
+		.column {
+			float: left;
+			width: 30.33%;
+			padding: 20px;
+		}
+
+		.row::after {
+			content: "";
+			clear: both;
+			display: table;
+		}
+		.column1 {
+			float: left;
+			width: 40.33%;
+			padding: 60px;
+		}
+
+		.row1::after {
+			content: "";
+			clear: both;
+			display: table;
+		}
+
+		.gallery {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			text-align: center;
+		}
+
+		.gallery img {
+			margin: 0 3px 3px 0;
+		}
+	</style>
+	<script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+	<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 	</head>
 	<body>
-		Homework 1 index.html here
+	<br>
+	<h1><b>Homework 1: Rasterizer</b></h1>
+	<div>Jason Kim</div>
+	<br>
+	<br>
+	<div>Task 1: Drawing Single-Color Triangles</div>
+	<p>To rasterize my triangles I create a boundary box of the triangle from the 3 coordinates provided and loop through each of 
+		the pixels to detect if they are inside the triangle or not by using the three line test. The winding of the triangle matters, 
+		so to determine the CCW or CW direction I calculate the signed area of the triangle, where positive area gives CCW and negative area gives CW 
+		(<a style="text-decoration:none"; href="https://cp-algorithms.com/geometry/oriented-triangle-area.html">link</a>). 
+		This algorithm cannot be worse than the one that checks each sample that is within the bounding box because my algorithm gets the minimum and maximum of the
+		x and y points given and only loops through a smaller bounding box that contains the triangle instead of the whole box. Below we can see that a naive implementation 
+		has some aliasing in the triangles from the zig-zag patterns on its edges.
+		<center>
+		<figure>
+			<img src="task1.png">
+			<figcaption>Fig.1 - Triangle Rasterization of different types of triangles.</figcaption>
+		</figure> 
+		</center>
+	</p>
+	<br>
+	<div>Task 2: Antialiasing by Supersampling</div>
+	<p> Supersampling is useful because we can antialias an image and improve the resolution of our image. To implement supersampling, I rasterized by triangles similar to Part 1, but now there are two extra for loops to loop through each 
+		sub sample per pixel and test if each sub sample is inside the triangle. The size of the sample_buffer needs to be \( \text{sample_rate} \times \text{width} \times \text{height} \), which means
+		the sample_buffer array size had to be changed dynamically based on the sample rate. The way I store the colors of each sub-sample is in row major order 
+		but we jump/index into the array by the sample size and sample offset to later average/downsample the sub sample's 
+		colors per pixel, which will be the final color of that pixel. For example, if the sample size is 4, then index 0, 1, 2, 3 will contain the 4 sub samples for the beginning of the 
+		top row pixel and 20, 21, 22, 23 will contain the 4 sub samples for the starting pixel of the second row and so on. For the images below, we can see how increasing the 
+		sampling rate reduces aliasing and softens those edges.
+		<center>
+		<figure>
+			<center>
+			<div class="row">
+				<div class="column">
+				<img src="task1.png" alt="Snow" style="width:100%">
+				</div>
+				<div class="column">
+				<img src="task2_4.png" alt="Forest" style="width:100%">
+				</div>
+				<div class="column">
+				<img src="task2_16.png" alt="Mountains" style="width:100%">
+				</div>
+			</div>
+			</center>
+			<figcaption>Fig.2 - Triangle Rasterization of different types of triangles at 1, 4, 16 sampling rates.</figcaption>
+		</figure> 
+		</center>
+	</p>
+	<br>
+	<div>Task 3: Transforms</div>
+	<p>
+		My cubeman is running. It involved a lot of rotating and translating to get the pieces in a form of it running. 
+		<center>
+		<figure>
+			<img src="task3.png">
+			<figcaption>Fig.3 - Cubeman running transformation.</figcaption>
+		</figure> 
+		</center>
+	</p>
+	<br>
+	<div>Task 4: Barycentric Coordinates</div>
+	<p>
+		To implement baycentric coordinates, I found that a matrix representation is much simpler (<a style="text-decoration:none"; href="https://artofproblemsolving.com/community/c2148h1044435_matrix_approach_to_barycentricareal_coordinates">link</a>). Baycentric coordinates is a coordinate system consisting of alpha, beta, and gamma that are dervived from three 
+		reference points. Basically it allows us to define points relative to the reference points as proportions of an area (alpha, beta, and gamma). For example, in the triangle image below, we defined 3 reference points at the vertices 
+		that represent RGB colors; with baycentric coordinates we can interpolate colors at any point in the triangle. 
+		<center>
+			<figure>
+				<div class="row1">
+					<div class="column1">
+					<img src="task4.png" alt="Snow" style="width:100%">
+					</div>
+					<div class="column1">
+					<img src="task4_2.png" alt="Forest" style="width:100%">
+					</div>
+				</div>
+				<figcaption>Fig.4 - Baycentric RGB triangle on the left. Generated RGB circle on the right.</figcaption>
+			</figure> 
+		</center>
+	</p>
+	<br>
+	<div>Task 5: "Pixel Sampling" for Texture Mapping</div>
+	<p>
+		Pixel sampling, in our case, determines the color of the texel within a texture image by sampling screen pixels for a texel, which allows
+		us to map somthing from the screen space to the texture space. There are two different types of pixel sampling that were implemented: bilinear and nearest sampling. 
+		Bilinear sampling involves grabbing 4 nearest samples that correspond to a point and perform 2 horizontal linear interpolations and 1 vertical interpolation on those results; 
+		based on the distance of the point to the 4 different samples, we can obtain a pixel value for our texture map. To implement this, I found the four nearest texels and LERP them 
+		as described above and returned the resulting interpolated value. For nearest sampling, we select the color of the nearest texel of our texture coordinates. To do this, I 
+		rescaled the u, v texture coordinates to not be normalized and determined the nearest texel using the get_texel function. Below we see 4 images that display nearest and bilinear
+		sampling at different sampling rates. Improving the sampling rates improved the quality of both sampling methods, but we can see that bilinear has an advantage because
+		the texture of the Campanile is more defined compared to the nearest sampling as the colors "smoothens" out more for bilinear. Hence the difference between the two methods becomes 
+		more apparent when the texture scaling is more defined, nearest might produce some pixelation while bilinear can give a higher quality image than nearest.
+		<center>
+			<figure>
+				<center>
+				<div class="gallery">
+					<div>
+						<img src="task5_1.png" style="width:40%" />
+						<img src="task5_2.png" style="width:40%"/>
+					</div>
+					
+					<div>
+						<img src="task5_4.png" style="width:40%"/>
+						<img src="task5_3.png" style="width:40%"/>
+					</div>
+					</div>
+				</center>
+				<figcaption>Fig.5 - Nearest sampling on the top row and bilinear sampling on the bottom row with samplling rate of 1 (left column) and 16 (right column).</figcaption>
+			</figure> 
+		</center>
+	</p>
+	<br>
+	<div>Task 6: "Level Sampling" with Mipmaps for Texture Mapping </div>
+	<p>
+		Level sampling is when you sample different textures at levels of detail of an image based on the distance, where far away objects use higher levels to prevent
+		aliasing and closer objects in the image use lower levels to reduce blurring (mipmaps). For level 0, I simply assigned level to 0 to the sample
+		functions from Part 5, which means it is simply using the original texture level. For level nearest, I round the current level to the nearest level, and for linear interpolation
+		of level, I do a trilinear sampling grabbing two different levels and sampling them bilinearly and interpolating the results. For super sampling, it requires more memory 
+		usage, and can reduce aliasing, but in turn it has a slower rendering speed since we now have to go through sub pixels. For point sampling, there are two types:
+		nearest and bilinear. Nearest sampling is faster and requires less memory usage compared to bilinear sampling; both methods though are not good at antialiasing. For level 
+		sampling, it requires more memory as we are storing mipmaps levels and is a little slower as it requires some computation of levels, and espeically trilinear sampling. It is good at 
+		antialiasing as you increase the levels. Below we can see differences between the level and pixel sampling techniques. Nearest level and linear sampling shows the best results as 
+		we can see the texture of the hair better, but there is some blur.
+		<center>
+			<figure>
+				<center>
+				<div class="gallery">
+					<figcaption style="font-weight: normal; font-size: medium;"> L_ZERO P_NEAREST     
+						&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+						 L_ZERO P_LINEAR</figcaption>
+					<div>
+						<img src="screenshot_2-12_14-19-20.png" style="width:40%"/>
+						<img src="screenshot_2-12_14-19-30.png" style="width:40%"/>
+					</div>
+					<figcaption style="font-weight: normal; font-size: medium;"> L_NEAREST P_NEAREST     
+						&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 
+						 L_NEAREST P_LINEAR</figcaption>
+					<div>
+						<img src="screenshot_2-12_14-19-43.png" style="width:40%"/>
+						<img src="screenshot_2-12_14-19-54.png" style="width:40%"/>
+					</div>
+					</div>
+				</center>
+				<figcaption>Fig.6 -Different level and pixel sampling combinations for American Gothic picture.</figcaption>
+			</figure> 
+		</center>
+	</p>
 	</body>
-</html>
+</html> 
