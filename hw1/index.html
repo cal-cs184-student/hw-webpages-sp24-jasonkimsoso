@@ -53,6 +53,14 @@
 	<div>Jason Kim</div>
 	<br>
 	<br>
+	<div>Overview</div>
+		<p>Throughout this homework, I built a rasterizer that renders SVG files using triangles. With a simple triangle rasterizer, some colored triangles were generated, 
+			but they produced aliasing and zaggies. The issues from the naive implementation were alleviated in some way by supersampling. Afterwards, the naive triangle rasterizer only 
+			drew triangles of one color, but with barycentric coordinates we can work with different colors inside the triangle. BUilding upon all this, pixel sampling was added that allowed us to 
+			sample different points from the texture space (u, v), with bilinear and nearest being our sampling methods. However, the rendered images might have aliasing and blur in certain areas 
+			depending on their distance, which we can handle with mipmaps by level sampling. Some interesting things I've learned from this homework is how SVG files work and the process of improving 
+			the rendering quality of our images. </p>
+	<br>
 	<div>Task 1: Drawing Single-Color Triangles</div>
 	<p>
 		To rasterize my triangles I create a boundary box of the triangle from the 3 coordinates provided and loop through 
@@ -79,7 +87,8 @@
 		based on the sample rate. The way I store the colors of each sub-sample is in row major order but we jump/index into the array by the sample size and sample 
 		offset to later average/downsample the sub sample's colors per pixel, which will be the final color of that pixel. For example, if the sample size is 4, 
 		then index 0, 1, 2, 3 will contain the 4 sub samples for the beginning of the top row pixel and 20, 21, 22, 23 will contain the 4 sub samples for the starting 
-		pixel of the second row and so on. For the images below, we can see how increasing the sampling rate reduces aliasing and softens those edges. 	
+		pixel of the second row and so on. For the images below, we can see how increasing the sampling rate reduces aliasing and softens those edges 
+		since we are now sampling more “pixels” instead of one pixel as we increase the sample rate.
 		<center>
 		<figure>
 			<center>
