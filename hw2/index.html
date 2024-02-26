@@ -49,11 +49,7 @@
 
 <h2 align="middle">Overview</h2>
 <p>
-    Throughout this project, we are introduced to Bezier curves and compute them through the de Casteljau's algorithm that involve linear interpolations from 
-    given control points. Expanding from the 2D Bezier curves, we applied the algorithm to Bezier surfaces. However, Bezier surfaces alone had rigid surfaces and 
-    not good shading. So to account for this, I implemented area-weighted vertex normals that is used to provided phong shading and made the surface and shading 
-    of the object better. After this, I implemented upsampling to create smoother mesh objects, but to do so we need to define edge flips and splits, which involved 
-    pointer manipulation since the mesh structure was stored as a halfedge data structure. 
+  Throughout this project, we are introduced to Bezier curves and compute them through de Casteljau's algorithm, which involves linear interpolations from given control points. Expanding from the 2D Bezier curves, we applied the algorithm to Bezier surfaces. However, Bezier surfaces alone had rigid surfaces and did not have shading. So, to account for this, I implemented area-weighted vertex normals that are used to provide phong shading and made the surface and shading of the object better. After this, I implemented upsampling to create smoother mesh objects. Upsampling requires edge flips and splits, which involve pointer manipulation since the mesh structure is stored as a half-edge data structure. 
 </p>
 <br>
 
@@ -63,13 +59,8 @@
 <h3 align="middle">Part 1: Bezier Curves with 1D de Casteljau Subdivision</h3>
 
 <p>
-    de Casteljau's algorithm is an algorithm that allows us to evaluate Bezier curves by using recursive linear interpolations from given control points.
-    It is paramterized by the scalar t that varies from 0 to 1. By repeatedly doing recusive linear interpolations we will arrive at a single point that will 
-    lie on the Bezier curve from the paramter t. To implement the algorithm, I used a for loop that will evaluate one step of the rescursive algorithm by using the formula
-    $p'_i = (1-t)p_i + tp_{i+1}$, where $p_i$ are the control points; the function evaluateStep() will return a list of linearly interpolated points. Below are images of each step of the Bezier 
-    curve with 6 control points using the algorithm specified. We can observe how after each step for a fixed t, the algorithm converges to a single point on the Bezier curve. 
-    Also there are two images where one shows the control points being moved to create another Bezier curve and one where I change the parameter t, which we can see the converged point
-    move.
+  de Casteljau's algorithm is an algorithm that allows us to evaluate Bezier curves by using recursive linear interpolations from given control points. It is parameterized by the scalar t that varies from 0 to 1. By repeatedly doing recursive linear interpolations, we will arrive at a single point that will lie on the Bezier curve from the parameter t. To implement the algorithm, I used a for loop that will evaluate one step of the recursive algorithm by using the formula
+    $p'_i = (1-t)p_i + tp_{i+1}$, where $p_i$ are the control points; the function evaluateStep() will return a list of linearly interpolated points. Below are images of each step of the Bezier curve with six control points using the algorithm specified. We can observe how after each step for a fixed t, the algorithm converges to a single point on the Bezier curve. Also there are two images where one shows the control points being moved to create another Bezier curve and one where I change the parameter t, which we can see the converged point move. 
 </p>
 <div align="middle">
   <table style="width:100%">
@@ -119,12 +110,7 @@
 
 <h3 align="middle">Part 2: Bezier Surfaces with Separable 1D de Casteljau</h3>
 <p>
-  The de Casteljau algorithm for Bezier surfaces extends the curve algorithm by recursively subdividing a grid of control points. 
-  It iteratively interpolates points on the surface by linearly combining control points along rows and columns with (u,v) parameters, respectively.
-  I implemented this by creating a evalaute1D() function that takes in a list of control points and returns a final point that is on the Bezier curve,
-  similar to Part 1. Then using the function, I stored the list of final interpolated points returned by the function evalaute1D() with paramter u, and that 
-  list of points was used with paramter v to obtain the final point on the Bezier surface. Below is an image
-  of the Bezier surface of a teapot.
+  The de Casteljau algorithm for Bezier surfaces extends the curve algorithm by recursively subdividing a grid of control points. It iteratively interpolates points on the surface by linearly combining control points along rows and columns with (u,v) parameters, respectively. I implemented this by creating an evalaute1D() function that takes in a list of control points and returns a final point on the Bezier curve, similar to Part 1. Then using the function, I stored the list of final interpolated points returned by the function evalaute1D() with parameter u, and the list of points was used with parameter v to obtain the final point on the Bezier surface. Below is an image of the Bezier surface of a teapot.
 
 </p>
 <div align="middle">
@@ -144,10 +130,7 @@
 
 <h3 align="middle">Part 3: Area-Weighted Vertex Normals</h3>
 <p>
-    Vertex normals can be used to obtain phong shading, I implemented these area-weighted vertex normals by traversing through the appropriate halfedges to grab the 
-    positions of a vertex. I used this to get the area-weighted average of the surrounding triangles by computing the cross product between the three vertices obtained (that forms a triangle).
-    Using the combined area result, I got the unit vector of that result to obtain the approximate unit normal. Below are the results of area-weighted vertex normals. We can 
-    see that the surface got smoother and the shading too.
+  Vertex normals can be used to obtain Phong shading, I implemented these area-weighted vertex normals by traversing through the appropriate half edges to grab the positions of a vertex. I used this to get the area-weighted average of the surrounding triangles by computing the cross product between the three vertices obtained (that forms a triangle). Using the combined area result, I got the unit vector of that result to obtain the approximate unit normal. Below are the results of area-weighted vertex normals. We can see that the surface got smoother and the shading too.
 </p>
 <div align="middle">
   <table style="width:100%">
@@ -167,11 +150,7 @@
 
 <h3 align="middle">Part 4: Edge Flip</h3>
 <p>
-    Below is an image of how I did the edge flip operation. I drew out the halfedge pointers and changed it's 
-    vertex, twin, face, and next pointers (one by one) using the setNeighbors function. If the edge was a boundary then it does not flip it's edge. You can see that 
-    I did not have to change much for the 4 halfedges other than h0 and t0. The left and right part of the diagram below is the before
-    and after edge flip visualization, respectively. Thanks to the diagram, I had a good visual on what to update the pointers to, which saved me from a harsh debugging session. I only
-    had some minor bugs that involved me forgetting to update certain pointers like the face. 
+  Below is an image of how I did the edge flip operation. I drew out the half-edge pointers and changed their vertex, twin, face, and next pointers (one by one) using the setNeighbors function. If the edge was a boundary then it does not flip its edge. You can see that I did not have to change much for the 4 half-edges other than h0 and t0. The left and right parts of the diagram below are the before and after edge flip visualization, respectively. Thanks to the diagram, I had a good visual on what to update the pointers to, which saved me from a harsh debugging session. I only had some minor bugs that involved me forgetting to update certain pointers like the face.
 </p>
 <div align="middle">
   <table style="width:100%">
@@ -202,13 +181,8 @@
 
 <h3 align="middle">Part 5: Edge Split</h3>
 <p>
-    Similar to Part 4, I drew a visualization of edge splits as shown in the image below and changed the pointers of the halfedge accordingly. 
-    In total, I declared 6 new halfedges, 3 new edges, 2 new faces, and 1 new vertex. The new vertex v is at the midpoint of the original 
-    structure between v0 and v2, with the halfedge being h0. The 6 halfedges are the halfedge and twin pair of the three new edges that are created 
-    as a result of the split. For the faces, I updated it's associated halfedges appropriately. By doing this way, it saves the hassle of saving
-    old halfedge data and updating many fields for the original halfedges h1, h2, t1, and t2, since I only had to update the next and face pointers 
-    to account for the new halfedges and faces. Although drawing out the pointers did minimize the chances of getting severe bugs, I did have a bug where 
-    a split would make a face or surface disappear, but it was quickly fixed when I realized that my original faces f0 and f1 had to have their halfedges updated.
+  Similar to Part 4, I drew a visualization of edge splits as shown in the image below, and changed the pointers of the half-edge accordingly. In total, I declared 6 new half-edges, 3 new edges, 2 new faces, and 1 new vertex. The new vertex v is at the midpoint of the original structure between v0 and v2, with the half-edge being h0. The 6 half edges are the half-edge and twin pair of the three new edges that are created as a result of the split. For the faces, I updated the associated half-edges appropriately. Doing this way saves the hassle of saving old half-edge data and updating many fields for the original half-edges h1, h2, t1, and t2 since I only had to update the next and face pointers to account for the new half-edges and faces. Although drawing out the pointers did minimize the chances of getting severe bugs, I did have a bug where a split would make a face or surface disappear, but it was quickly fixed when I realized that my original faces f0 and f1 had to have their half-edges updated. 
+
 
 </p>
 <div align="middle">
@@ -260,11 +234,7 @@
 
 <h3 align="middle">Part 6: Loop Subdivision for Mesh Upsampling</h3>
 <p>
-    To implement a 4-1 loop subdivision, I computed the new position coordinates for all the vertices in the mesh. Then I computed the updated vertex positions
-    associated with edges. After this step, I basically split every edge in the mesh and flipped any edge that connected a old and new vertex. With this, I saved the 
-    vertex positions with the new ones. The sequence and formula's to perform and compute the new position coordinates are shown below. This part was difficult to debug since
-    it relies on the edge split and flip functions. I had instances where sometimes a surface would disappear or my loop subdivision would not properly split because I was not 
-    properly defining the new edges and original edges. 
+  To implement a 4-1 loop subdivision, I computed the new position coordinates for all the vertices in the mesh. Then I computed the updated vertex positions associated with edges. After this step, I split every edge in the mesh and flipped any edge that connected an old and new vertex. With this, I saved the vertex positions with the new ones. The sequence and formulas to perform and compute the new position coordinates are shown below. This part was difficult to debug since it relies on the edge split and flip functions. I had instances where sometimes a surface would disappear or my loop subdivision would not properly split because I was not properly defining the new edges and original edges.
 </p>
 <div align="middle">
   <table style="width:100%">
@@ -315,10 +285,8 @@
   </table>
 </div>
 
-<p>Another interesting observation is the cube. When you do 4-1 loop subdivision on a cube it becomes asymmetric as shown below. However, you can 
-  fix this by predefining some edge splits and flips. I split and flip the edges in a way that made it symetrical when we perform further edge splits and flip, which you can see 
-  below on the right. The reason the cube becomes asymmetric is because of the orientation of the triangles and how they are assembled to form this cube. The degree of the vertices
-  was not consistent and varied. With the pre splitting and flips, now the every corner of the cube had the same degree as shown below.
+<p>Another interesting observation is the cube. When you do a 4-1 loop subdivision on a cube it becomes asymmetric as shown below. However, you can fix this by predefining some edge splits and flips. I split and flipped the edges in a way that made it symmetrical when we performed further edge splits and flips, which you can see below on the right. The reason the cube becomes asymmetric is because of the orientation of the triangles and how they are assembled to form this cube. The degree of the vertices was not consistent and varied. With the pre-splitting and flips, now every corner of the cube had the same degree as shown below. 
+
 </p>
 
 <div align="middle">
