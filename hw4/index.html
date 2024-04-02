@@ -1,7 +1,455 @@
-<html>
-	<head>
-	</head>
-	<body>
-		Homework 4 index.html here
-	</body>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<style>
+  body {
+    padding: 100px;
+    width: 1000px;
+    margin: auto;
+    text-align: left;
+    font-weight: 300;
+    font-family: 'Open Sans', sans-serif;
+    color: #121212;
+  }
+  h1, h2, h3, h4 {
+    font-family: 'Source Sans Pro', sans-serif;
+  }
+</style>
+<title>CS 184 Mesh Editor</title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<link href="https://fonts.googleapis.com/css?family=Open+Sans|Source+Sans+Pro" rel="stylesheet">
+<script>
+  MathJax = {
+    tex: {
+      inlineMath: [['$', '$'], ['\\(', '\\)']]
+    }
+  };
+</script>
+<script id="MathJax-script" async
+  src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js">
+</script>
+</head>
+<body>
+
+<h1 align="middle">CS 184: Computer Graphics and Imaging, Spring 2024</h1>
+<h1 align="middle">Project 4: Cloth Simulator</h1>
+<h2 align="middle">Jason Kim</h2>
+
+<br><br>
+
+<div>
+
+<h2 align="middle">Overview</h2>
+<p>
+  For this homework, I implemented a cloth simulator and shaders with OpenGL. To simulate a cloth, I created a grid model of point masses and different types of springs like structural, bending, and shearing. Each of these point masses and springs are subjected to forces that follow Newton's second law and Hooke's law and their new positions are computed with Verlet Integration. In addition to this, I implemented both self collisions and collision with objects (with hashing) by checking if the point masses intersect/inside the object and applying a correction to the position of it so that it doesn't fall through the object. With all of this, we can make shaders with OpenGL like texture shaders, mirror shaders, displacement and bump mapping, and Blinn-Phong shading. It was an interesting homework assignment that taught me a lot about the graphics pipeline. There were a few bugs that were hard to tackle but with time they were resolved.
+</p>
+
+<h2 align="middle">Part I: Masses and Springs</h2>
+<p>
+  We use a system of point masses and springs to create a cloth model. To do this, I created a grid of point masses with num_width_points by num_height_points point masses that span the width and height of the plane equally. Then these point masses are connected by springs. The types of springs we focus on are bending, shearing, and structural. Bending springs are added between a point mass and a point mass that is 2 grid spaces above it and 2 grid spaces left of it. Shearing springs are added between a point mass and a point mass that diagonally across it to the top left and pair the point mass to its left with a mass diagonally located on the top right. Structural springs are added between a point mass and a point mass above it and to the left of it. With this, we can create a grid of masses and springs as shown in the images below with 2 pinned.
+</p>
+<div align="middle">
+  <table style="width:100%">
+    <tr align="center">
+      <td>
+        <img src="imgs/part1/view.png" align="middle" width="680px"/>
+        <figcaption>View of point masses and spring structure. </figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+<div align="center">
+  <table style="width:100%">
+      <tr>
+          <td align="middle">
+          <img src="imgs/part1/structural_bending.png" width="680px" />
+          <figcaption align="middle">Structural and Bending constraints.</figcaption>
+      </tr>
+  </table>
+</div>
+<div align="center">
+  <table style="width:100%">
+      <tr>
+          <td align="middle">
+          <img src="imgs/part1/shearing.png" width="680px" />
+          <figcaption align="middle">Shearing constraint.</figcaption>
+      </tr>
+  </table>
+</div>
+<div align="center">
+  <table style="width:100%">
+      <tr>
+          <td align="middle">
+          <img src="imgs/part1/all.png" width="680px" />
+          <figcaption align="middle">All constraints.</figcaption>
+      </tr>
+  </table>
+</div>
+
+<h2 align="middle">Part II: Simulation via Numerical Integration</h2>
+<p>
+  Now that we have a cloth grid model of point masses and springs, we can do simulations by integrating Newton's 2nd Law, Hooke's law, and Verlet's integration. 
+  To do this, I compute the total force on a point mass by using Newton's 2nd Law $F=ma$ and apply this force to every point mass. Then I 
+  account for spring forces between 2 point masses using Hooke's law $F_s = k_s * (||p_a-p_b||-l)$, where $k_s$ is the spring constant, $l$ is the spring's rest length, and $p_a$ and $p_b$
+  are the point masses. With our point masses subjected to different forces, we use Verlet's Integration to calculate the new point mass positions. 
+  The new positions for the point masses (except ones that are pinned) are calculated using: $x_{t+dt} = x_t + (1-d)*(x_t-x_{t-dt})+a_t*dt^2$, where $d$ is the damping term, and $a_t$ is the total
+  acceleration from all the forces. However, to prevent the springs from being deformed, we add a constraint to each spring that the two
+  point masses positions are at most 10% greater than its rest length. Below are the results of the simulation on a cloth model that is 2 pinned
+  and the effects of changing different parameters like $k_s$, density, and damping. 
+</p>
+<p>
+  For $k_s$, the images show that the higher your spring constant is the stiffer your springs are, and vice versa. You can observe from the normal color gradient in the image that 
+  the higher spring constant seems to be "tighter" or held up more stiffly compared to the lower spring constant.
+</p>
+<div align="middle">
+  <table style="width:100%">
+    <tr align="center">
+      <td>
+        <img src="imgs/part2/ks_500.png" align="middle" width="400px"/>
+        <figcaption align="middle">Spring constant of 500 N/m.</figcaption>
+      </td>
+      <td>
+        <img src="imgs/part2/ks_5000.png" align="middle" width="400px"/>
+        <figcaption align="middle">Spring constant of 5000 N/m.</figcaption>
+      </td>
+      <td>
+        <img src="imgs/part2/ks_50000.png" align="middle" width="400px"/>
+        <figcaption align="middle">Spring constant of 50000 N/m.</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+<p>
+  Below is the effect of density on the cloth model. Density relates to mass, which can affect the force applied to the point masses. 
+  Mainly, we can observe the effects of external forces (gravity, etc.) on the cloth model, with lower densities there is less mass, hence less force acted upon it, and vice versa.
+</p>
+<div align="middle">
+  <table style="width:100%">
+    <tr align="center">
+      <td>
+        <img src="imgs/part2/density_1.png" align="middle" width="400px"/>
+        <figcaption align="middle">Density of 1$\frac{g}{cm^2}$.</figcaption>
+      </td>
+      <td>
+        <img src="imgs/part2/density_15.png" align="middle" width="400px"/>
+        <figcaption align="middle">Density of 15$\frac{g}{cm^2}$.</figcaption>
+      </td>
+      <td>
+        <img src="imgs/part2/density_150.png" align="middle" width="400px"/>
+        <figcaption align="middle">Density of 150$\frac{g}{cm^2}$.</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+<p>
+  It is difficult to see the effects of damping on image alone, but damping is like energy loss. Below is a case where if there is 
+  no damping (0%), then the cloth would be unstable and wobble/swing a lot and even swing down faster compared to higher damping factors. 
+  Higher damping like 1%, swung down and did not sway. 
+</p>
+<div align="middle">
+  <table style="width:100%">
+    <tr align="center">
+      <td>
+        <img src="imgs/part2/damping_0.png" align="middle" width="400px"  height="280px"/>
+        <figcaption align="middle">Damping of 0%</figcaption>
+      </td>
+      <td>
+        <img src="imgs/part2/damping_20.png" align="middle" width="400px"/>
+        <figcaption align="middle">Damping of 0.2%</figcaption>
+      </td>
+      <td>
+        <img src="imgs/part2/damping_100.png" align="middle" width="400px"/>
+        <figcaption align="middle">Damping of 1%</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+<p>Below is an image of the default of 4 pinned with normal paramters.</p>
+<div align="middle">
+  <table style="width:100%">
+    <tr align="center">
+      <td>
+        <img src="imgs/part2/default_pin4.png" align="middle" width="480px" height="305px"/>
+        <figcaption>Default view of 4 pin. </figcaption>
+      </td>
+      <td>
+        <img src="imgs/part2/default_pin4_normal.png" align="middle" width="480px"/>
+        <figcaption>Default view of 4 pin with normal appearance setting. </figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<h2 align="middle">Part III: Handling Collisions with Other Objects</h2>
+<p>
+  To simulate collisions with other objects like a sphere and plane, we have to detect whether the point mass intersects or is inside the object. If the point mass is inside the object then I adjust the position of the point mass so that it stays outside of the primate surface. For a sphere primitive, I used the origin and radius of the sphere along with the point mass position to see if the point mass was inside the sphere or not, and if it was, I applied a correction vector to calculate the new position of the point mass. Similarly, for the plane, I check if the point mass crosses the plane from one side to another in the last time step using the current and last position of the point mass. For both primitives, we account for friction by scaling down the correction vector calculated for the plane and sphere primitive. 
+</p>
+<p>
+  Below are images of a sphere collision with varying spring constants. We can see that the higher the spring constant, the more stiff our cloth is, so it is less droopy compared to lower spring constants when it collides with the sphere.
+</p>
+<div align="middle">
+  <table style="width:100%">
+    <tr align="center">
+      <td>
+        <img src="imgs/part3/ks_500.png" align="middle" width="400px"  height="280px"/>
+        <figcaption align="middle">Sphere collision with spring constant of 500 N/m</figcaption>
+      </td>
+      <td>
+        <img src="imgs/part3/ks_5000.png" align="middle" width="400px"/>
+        <figcaption align="middle">Sphere collision with spring constant of 5000 N/m</figcaption>
+      </td>
+      <td>
+        <img src="imgs/part3/ks_50000.png" align="middle" width="400px"/>
+        <figcaption align="middle">Sphere collision with spring constant of 50000 N/m</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+<p>
+  Below are images of our cloth lying on a plane. 
+</p>
+<div align="middle">
+  <table style="width:100%">
+    <tr align="center">
+      <td>
+        <img src="imgs/part3/plane.png" align="middle" width="480px" height="305px"/>
+        <figcaption>Cloth collision with plane.</figcaption>
+      </td>
+      <td>
+        <img src="imgs/part3/plane_shade.png" align="middle" width="480px"/>
+        <figcaption>Cloth collision with plane with normal appearance setting. </figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<h2 align="middle">Part IV: Handling Self-Collisions</h2>
+<p>
+  After implementing collisions with other objects, I implemented self-collisions using hashes. For each point mass, 
+  I generate a unique key depending on the position of the point mass based on this <a href="https://stackoverflow.com/questions/1145217/why-should-hash-functions-use-a-prime-number-modulus#:~:text=Edit%3A%20As%20a%20summary%2C%20primes,give%20you%20its%20hash%20value.">site</a>,
+  which I took inspiration from Java's hash that uses the prime number 31. After assigning each point mass with a unique hash key, I apply 
+  a correction vector on the point masses such that they are at least 2 * thickness distance apart. The final position of a point mass is the average of the sum 
+  of corrections from all the other point masses. Below we see three images that show the initial, middle, and end state, as the cloth is dropped. 
+</p>
+<div align="middle">
+  <table style="width:100%">
+    <tr align="center">
+      <td>
+        <img src="imgs/part4/start.png" align="middle" width="400px"/>
+        <figcaption align="middle">Self collision of cloth initially.</figcaption>
+      </td>
+      <td>
+        <img src="imgs/part4/middle.png" align="middle" width="400px"/>
+        <figcaption align="middle">Self collision of cloth before it goes to resting state.</figcaption>
+      </td>
+      <td>
+        <img src="imgs/part4/end.png" align="middle" width="400px"/>
+        <figcaption align="middle">Self collision of cloth near resting state.</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+<p>
+  Below are images that show the effect of $k_s$ on self collisions. We can observe that with a higher spring constant,
+  there are less folds as the cloth is stiffer compared to lower spring constants. 
+</p>
+<div align="middle">
+  <table style="width:100%">
+    <tr align="center">
+      <td>
+        <img src="imgs/part4/ks_500.png" align="middle" width="400px"/>
+        <figcaption align="middle">Self collision with spring constant of 500 N/m</figcaption>
+      </td>
+      <td>
+        <img src="imgs/part4/ks_5000.png" align="middle" width="400px"/>
+        <figcaption align="middle">Self collision with spring constant of 5000 N/m</figcaption>
+      </td>
+      <td>
+        <img src="imgs/part4/ks_50000.png" align="middle" width="400px"/>
+        <figcaption align="middle">Self collision with spring constant of 50000 N/m</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+<p>
+  Below are images of the effect of density on self-collisions. Unlike the spring constant, lower densities cause fewer folds because the cloth experiences less gravitational force with less mass. 
+</p>
+<div align="middle">
+  <table style="width:100%">
+    <tr align="center">
+      <td>
+        <img src="imgs/part4/density_1.png" align="middle" width="400px"/>
+        <figcaption align="middle">Self collision with density of 1 $\frac{g}{cm^2}$</figcaption>
+      </td>
+      <td>
+        <img src="imgs/part4/density_15.png" align="middle" width="400px"/>
+        <figcaption align="middle">Self collision with density of 15 $\frac{g}{cm^2}$</figcaption>
+      </td>
+      <td>
+        <img src="imgs/part4/density_150.png" align="middle" width="400px"/>
+        <figcaption align="middle">Self collision with density of 150 $\frac{g}{cm^2}$</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<h2 align="middle">Part V: Shaders</h2>
+<p>
+  A shader program in GLSL is a program that is able to utilize the GPU to execute sections of the graphics pipeline by taking in inputs like vertex normals, texture coordinates, camera position, etc. to output a 4 dimensional vector. These programs are built from vertex and fragment shaders. Vertex shaders execute the first stage of the graphics pipeline by processing the vertex to transform to normalized device coordinates, give attributes to each vertex, and generate texture coordinates for the fragment shader. Using the outputs of the vertex shader, the fragment shader determines the final appearance of a pixel.
+</p>
+<p>
+  The Blinn-Phong shading model is a lighting model that sums the ambient, diffuse, and spectacular components to generate the lighting and shading effects on an object. Thus, the equation for the model is $L = k_aI_a + k_d(\frac{I}{r^2})max(0, n*l)+ k_s(\frac{I}{r^2})max(0, n*h)^p$. 
+  Ambient shading is just a constant color to fill in black shadows and disregarded illumination. Diffuse shading is shading that is independent of the viewing direction while specular shading is dependent on the viewing direction. Below are some images of ambient, spectacular, diffuse shading, and the final result of the model. For the images below, I used $k_a = 0.1$, $k_d = 0.7$, $k_s = 0.5$, $I_a = 1$, and
+  $p = 50.0$.
+</p>
+<div align="middle">
+  <table style="width:100%">
+    <tr align="center">
+      <td>
+        <img src="imgs/part5/ambient.png" align="middle" width="400px"/>
+        <figcaption align="middle">Ambient component.</figcaption>
+      </td>
+      <td>
+        <img src="imgs/part5/spectular.png" align="middle" width="400px"/>
+        <figcaption align="middle">Specular component.</figcaption>
+      </td>
+    </tr>
+    <tr align="center">
+      <td>
+        <img src="imgs/part5/diffuse.png" align="middle" width="400px"/>
+        <figcaption align="middle">Diffuse component.</figcaption>
+      </td>
+      <td>
+        <img src="imgs/part5/model.png" align="middle" width="400px" height="300px"/>
+        <figcaption align="middle">Blinn-Phong model result.</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+<p>
+  Below is an image of my custom texture mapping shader. The custom image is an dark wood floor tile. This was done
+  by sampling the texture coordinates. 
+</p>
+<div align="middle">
+  <table style="width:100%">
+    <tr align="center">
+      <td>
+        <img src="imgs/part5/texture1.png" align="middle" width="400px"/>
+        <figcaption align="middle">Custom texture; before sphere collision</figcaption>
+      </td>
+      <td>
+        <img src="imgs/part5/texture.png" align="middle" width="400px"/>
+        <figcaption align="middle">Custom texture; after sphere collision</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+<p>
+  Below are images of bump and displacement mapping; I set the normal and height to 100 and 0.02, respectively for bump mapping and displacement mapping.  
+  From the images below, we can see that bump mapping we can see the details of a brick like texture on the objects. For displacement
+  mapping, we see the same texture as the bump, but the geometry of the objects look different with more defined rigids/bumps. 
+  Note: For the plane, the images below is hard to observe but the plane became more bumpy in displacement compared to bump mapping.
+</p>
+<div align="middle">
+  <table style="width:100%">
+    <tr align="center">
+      <td>
+        <img src="imgs/part5/bumpsphere.png" align="middle" width="400px"/>
+        <figcaption align="middle">Bump mapping on sphere.</figcaption>
+      </td>
+      <td>
+        <img src="imgs/part5/bumpplane.png" align="middle" width="400px"/>
+        <figcaption align="middle">Bump mapping on cloth.</figcaption>
+      </td>
+      <td>
+        <img src="imgs/part5/bump_col.png" align="middle" width="400px"/>
+        <figcaption align="middle">Bump mapping on sphere collision.</figcaption>
+      </td>
+
+    </tr>
+    <tr align="center">
+      <td>
+        <img src="imgs/part5/dissphere.png" align="middle" width="400px"/>
+        <figcaption align="middle">Displacement mapping on sphere.</figcaption>
+      </td>
+      <td>
+        <img src="imgs/part5/displane.png" align="middle" width="400px"/>
+        <figcaption align="middle">Displacement mapping on cloth.</figcaption>
+      </td>
+      <td>
+        <img src="imgs/part5/discol.png" align="middle" width="400px"/>
+        <figcaption align="middle">Displacement mapping on sphere collision.</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+<p>
+  Below are images of the sphere with bump and displacement mapping but with different veritcal and horizontal resolutions. 
+  For the bump mapping, there was barely any noticable differences when you change the resolutions. However, for displacement
+  mapping, there were noticable differences, as the bumps or sharp edges become more less defined and it starts
+  to look more like a sphere shape as you increased the resolutions to 128.
+</p>
+<div align="middle">
+  <table style="width:100%">
+    <tr align="center">
+      <td>
+        <img src="imgs/part5/bump_16.png" align="middle" width="400px"/>
+        <figcaption align="middle">Bump mapping with 16:16.</figcaption>
+      </td>
+      <td>
+        <img src="imgs/part5/bump_128.png" align="middle" width="400px"/>
+        <figcaption align="middle">Bump mapping with 128:128.</figcaption>
+      </td>
+    </tr>
+    <tr align="center">
+      <td>
+        <img src="imgs/part5/displace_16.png" align="middle" width="400px"/>
+        <figcaption align="middle">Displacement mapping 16:16.</figcaption>
+      </td>
+      <td>
+        <img src="imgs/part5/displace_128.png" align="middle" width="400px"/>
+        <figcaption align="middle">Displacement mapping 128:128.</figcaption>
+      </td>
+    </tr>
+  </table>
+</div>
+<p>
+  Below are images of the mirror shader. 
+</p>
+<div align="middle">
+  <table style="width:100%">
+    <tr align="center">
+      <td>
+        <img src="imgs/part5/mirrorplane.png" align="middle" width="400px"/>
+        <figcaption align="middle">Mirror shader on plane.</figcaption>
+      </td>
+      <td>
+        <img src="imgs/part5/mirrorsphere.png" align="middle" width="400px"/>
+        <figcaption align="middle">Mirror shader on sphere.</figcaption>
+      </td>
+    </tr>
+    <tr align="center">
+        <img src="imgs/part5/mirrorcol.png" align="middle" width="400px"/>
+        <figcaption align="middle">Mirror shader on sphere-cloth collision.</figcaption>
+    </tr>
+  </table>
+</div>
+<h2 align="middle">Extra Credit</h2>
+<p>
+  I implemented my own custom shader in addition to the ones from Part 5. My custom shader is a Cel shader, which is also known as toon-shading. In addition to this, I added a heatmap to show the intensity of the lights on the surface combined with cel shading. To do this, I calculated the light direction to compute the light intensity. Depending on the light intensity, the color would be chosen. Higher intensities are set to be brighter and lower intensities darker colors. To add the heat mapping, I calculated a hue value based on the angle between the vertex normal and the light direction, and converted from hsv to rgb space with saturation and value being set to 1. Then I interpolate the color from the cel shading and the color from the hsv to rgb conversion to blend them as shown on the right image. Below is an image of the sphere collision but with a gradient blue/purple color with cel shading. To the right is cel shading with heat mapping, where the red means higher intensities and green means lower.
+</p>
+<div align="middle">
+  <table style="width:100%">
+    <tr align="center">
+      <td>
+        <img src="imgs/part5/celshader.png" align="middle" width="400px"/>
+        <figcaption align="middle">Cel shader.</figcaption>
+      </td>
+      <td>
+        <img src="imgs/part5/celheat.png" align="middle" width="400px"/>
+        <figcaption align="middle">Cel shader + heat mapping.</figcaption>
+      </td>
+  </table>
+</div>
+</body>
 </html>
